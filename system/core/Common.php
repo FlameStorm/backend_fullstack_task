@@ -963,6 +963,21 @@ if ( ! function_exists('isJSON'))
     }
 }
 
+
+if ( ! function_exists('json_encode_def'))
+{
+    /**
+     * @param mixed $data
+     * @param int $params
+     * @param int $depth
+     * @return false|string
+     */
+    function json_encode_def($data, int $params = 0, int $depth = 512)
+    {
+        return json_encode($data, $params | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES, $depth);
+    }
+}
+
 if ( ! function_exists('contains'))
 {
     /**
@@ -989,7 +1004,7 @@ if ( ! function_exists('cli_response'))
      */
     function cli_response($data)
     {
-        echo json_encode($data);
+        echo json_encode_def($data, JSON_PRETTY_PRINT);
         exit;
     }
 }

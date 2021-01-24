@@ -106,6 +106,11 @@ class CI_Controller {
     }
 
 
+    public function json_encode($data)
+    {
+        return json_encode_def($data, JSON_PRETTY_PRINT);
+    }
+
     /**
      * @param array $data
      * @param int $http_code
@@ -114,7 +119,7 @@ class CI_Controller {
     public function response($data = [], int $http_code = 200)
     {
         App::get_ci()->output->set_status_header($http_code);
-        App::get_ci()->output->set_content_type('application/json')->set_output(json_encode($data));
+        App::get_ci()->output->set_content_type('application/json')->set_output($this->json_encode($data));
         return;
     }
 
@@ -148,7 +153,7 @@ class CI_Controller {
     {
         $data['status'] = CI_Core::RESPONSE_STATUS_SUCCESS;
         App::get_ci()->output->set_status_header($http_code);
-        App::get_ci()->output->set_content_type('application/json')->set_output(json_encode($data));
+        App::get_ci()->output->set_content_type('application/json')->set_output($this->json_encode($data));
         return;
     }
 
@@ -161,7 +166,7 @@ class CI_Controller {
     {
         $data['status'] = CI_Core::RESPONSE_STATUS_INFO;
         App::get_ci()->output->set_status_header($http_code);
-        App::get_ci()->output->set_content_type('application/json')->set_output(json_encode($data));
+        App::get_ci()->output->set_content_type('application/json')->set_output($this->json_encode($data));
         return;
     }
 
@@ -176,7 +181,7 @@ class CI_Controller {
         $data['status'] = CI_Core::RESPONSE_STATUS_ERROR;
         $data['error_message'] = $error_message;
         App::get_ci()->output->set_status_header($http_code);
-        App::get_ci()->output->set_content_type('application/json')->set_output(json_encode($data));
+        App::get_ci()->output->set_content_type('application/json')->set_output($this->json_encode($data));
         return;
     }
 
