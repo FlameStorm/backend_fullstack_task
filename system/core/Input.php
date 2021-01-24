@@ -137,7 +137,9 @@ class CI_Input {
 	 */
 	public function __construct()
 	{
-		$this->_allow_get_array		= (config_item('allow_get_array') === TRUE);
+        $this->_load_php_input();
+
+	    $this->_allow_get_array		= (config_item('allow_get_array') === TRUE);
 		$this->_enable_xss		= (config_item('global_xss_filtering') === TRUE);
 		$this->_enable_csrf		= (config_item('csrf_protection') === TRUE);
 		$this->_standardize_newlines	= (bool) config_item('standardize_newlines');
@@ -161,6 +163,27 @@ class CI_Input {
 
 		log_message('info', 'Input Class Initialized');
 	}
+
+	// --------------------------------------------------------------------
+
+    /**
+     * Load request params from PHP:input JSON
+     *
+     * @return void
+     */
+    protected function _load_php_input()
+    {
+        $post = file_get_contents("php://input");
+        if (!empty($post) && is_string($post) &&
+            FALSE !== ($post = json_decode($post, TRUE)) &&
+            is_array($post)
+        ) {
+            foreach ($post as $key => $value)
+            {
+                $_REQUEST[$key] = $_POST[$key] = $value;
+            }
+        }
+    }
 
 	// --------------------------------------------------------------------
 
