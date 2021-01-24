@@ -425,6 +425,7 @@ $LANG =& load_class('Lang', 'core');
 // *  Load the Emerald_model ORM class
 // * ------------------------------------------------------
 // */
+load_class('Model', 'core');
 $EMERALD_MODEL =& load_class('Emerald_model', 'core');
 
 
