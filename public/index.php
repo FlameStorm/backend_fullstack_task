@@ -58,7 +58,7 @@ if(isset($_SERVER['CI_DOMAIN']))
 {
     $domain = $_SERVER['CI_DOMAIN'];
 }
-define('DOMAIN', !empty($domain) ? $domain: 'example.com');
+define('DOMAIN', !empty($domain) ? $domain : $_SERVER['HTTP_HOST']);
 
 /*
  *---------------------------------------------------------------
