@@ -286,7 +286,7 @@ class Post_model extends CI_Emerald_Model {
 //            var_dump($d->get_user()->object_beautify()); die();
 
         $o->user = User_model::preparation($data->get_user(), 'main_page');
-        $o->coments = Comment_model::preparation($data->get_comments(), 'full_info');
+        $o->comments = Comment_model::preparation($data->get_comments(), 'full_info');
 
         $o->likes = rand(0, 25);
 
