@@ -276,6 +276,19 @@ class User_model extends CI_Emerald_Model {
         return $ret;
     }
 
+    public static function get_by_email(string $email)
+    {
+        $data = App::get_ci()->s->from(self::CLASS_TABLE)
+            ->where(['email' => $email])
+            ->orderBy('id', 'ASC')
+            ->one();
+
+        if (!$data) {
+            throw new \EmeraldModelNoDataException('No data with this email!: ' . xss_clean($email));
+        }
+
+        return (new self())->set($data);
+    }
 
     /**
      * Getting id from session

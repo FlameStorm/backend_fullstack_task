@@ -84,24 +84,30 @@ class Main_page extends MY_Controller
     }
 
 
-    public function login($user_id)
+    public function login()
     {
-        // Right now for tests we use from contriller
+        // Right now for tests we use from controller
         $login = App::get_ci()->input->post('login');
         $password = App::get_ci()->input->post('password');
 
-        if (empty($login) || empty($password)){
+        if (empty($login) || empty($password)) {
             return $this->response_error(CI_Core::RESPONSE_GENERIC_WRONG_PARAMS);
         }
 
-        // But data from modal window sent by POST request.  App::get_ci()->input...  to get it.
+        try {
+            $user_id = Login_model::login($login, $password);
+            $user = User_model::get_by_email($login);
 
+            if ($user->get_password() !== $password) {
+                return $this->response_error('Auth failed');
+            }
+        } catch (Exception $e){
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_NO_ACCESS);
+        }
 
-        //Todo: 1 st task - Authorisation.
+        Login_model::start_session($user);
 
-        Login_model::start_session($user_id);
-
-        return $this->response_success(['user' => $user_id]);
+        return $this->response_success(['user' => $user->get_id()]);
     }
 
 
