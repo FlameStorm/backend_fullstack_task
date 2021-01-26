@@ -95,17 +95,10 @@ class Main_page extends MY_Controller
         }
 
         try {
-            $user_id = Login_model::login($login, $password);
-            $user = User_model::get_by_email($login);
-
-            if ($user->get_password() !== $password) {
-                return $this->response_error('Auth failed');
-            }
+            $user = Login_model::login($login, $password);
         } catch (Exception $e){
             return $this->response_error(CI_Core::RESPONSE_GENERIC_NO_ACCESS);
         }
-
-        Login_model::start_session($user);
 
         return $this->response_success(['user' => $user->get_id()]);
     }
