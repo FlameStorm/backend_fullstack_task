@@ -4,6 +4,7 @@ namespace Model;
 use App;
 use CI_Model;
 use CriticalException;
+use Exception;
 
 class Login_model extends CI_Model {
 
@@ -11,6 +12,25 @@ class Login_model extends CI_Model {
     {
         parent::__construct();
 
+    }
+
+    /**
+     * @param string $login
+     * @param string $password
+     * @return User_model
+     * @throws Exception
+     */
+    public static function login(string $login, string $password): User_model
+    {
+        $user = User_model::get_by_email($login);
+
+        if ($user->get_password() !== $password) {
+            throw new Exception('Auth failed');
+        }
+
+        Login_model::start_session($user);
+
+        return $user;
     }
 
     public static function logout()
