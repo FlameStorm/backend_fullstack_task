@@ -205,9 +205,24 @@ class Main_page extends MY_Controller
         redirect(site_url('/'));
     }
 
-    public function add_money(){
-        // todo: 4th task  add money to user logic
-        return $this->response_success(['amount' => rand(1,55)]); // Колво лайков под постом \ комментарием чтобы обновить . Сейчас рандомная заглушка
+    public function add_money()
+    {
+        if (!User_model::is_logged()) {
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_NEED_AUTH);
+        }
+
+        $amount = floatval($this->input->input_stream('sum'));
+        if (!$amount) {
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_WRONG_PARAMS);
+        }
+        $user = User_model::get_user();
+
+        App::get_ci()->s->start_trans();
+        $user->set_wallet_balance($user->get_wallet_balance() + $amount);
+        $user->set_wallet_total_refilled($user->get_wallet_total_refilled() + $amount);
+        App::get_ci()->s->commit();
+
+        return $this->response_success(['amount' => $user->get_wallet_balance()]);
     }
 
     public function buy_boosterpack(){
