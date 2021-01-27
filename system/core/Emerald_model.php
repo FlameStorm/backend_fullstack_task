@@ -339,7 +339,7 @@ class CI_Emerald_Model {
      * @param array $order
      * @return static|null
      */
-    public static function get_by(array $params, array $order = []): ?static
+    public static function get_by(array $params, array $order = [])
     {
         $data = App::get_ci()->s->from(static::CLASS_TABLE);
         if ($params) {
