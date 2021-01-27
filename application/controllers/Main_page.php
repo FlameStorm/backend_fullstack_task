@@ -68,6 +68,13 @@ class Main_page extends MY_Controller
             return $this->comment_delete();
         }
 
+        if ($action === 'add_sub') {
+            return $this->comment_sub_add();
+        }
+
+
+        // Default - read comment
+
         if (!$comment_id = intval($action)) {
             return $this->response_error(CI_Core::RESPONSE_GENERIC_WRONG_PARAMS);
         }
@@ -144,6 +151,31 @@ class Main_page extends MY_Controller
         $result = $comment->delete();
 
         return $this->response_success(['deleted' => $result]);
+    }
+
+    protected function comment_sub_add()
+    {
+        if (!User_model::is_logged()){
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_NEED_AUTH);
+        }
+
+        $comment_id = intval($this->input->get('id'));
+        $message = trim($this->input->get('message'));
+
+        if (empty($comment_id) || empty($message)){
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_WRONG_PARAMS);
+        }
+
+        try {
+            $comment = new Comment_model($comment_id);
+        } catch (EmeraldModelNoDataException $ex){
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_NO_DATA);
+        }
+
+        $sub_comment = $comment->comment($message);
+
+        $result = Comment_model::preparation($sub_comment, 'full_info');
+        return $this->response_success(['comment' => $result]);
     }
 
 

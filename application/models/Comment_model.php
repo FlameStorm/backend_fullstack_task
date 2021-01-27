@@ -279,7 +279,7 @@ class Comment_model extends CI_Emerald_Model
         return $this;
     }
 
-    public static function comment_post(Post_model $post, $message)
+    public static function comment_post(Post_model $post, $message): Comment_model
     {
         $user = User_model::get_user();
         $data = [
@@ -290,9 +290,22 @@ class Comment_model extends CI_Emerald_Model
         return self::create($data);
     }
 
-    public static function comment(array $data)
+    public static function comment_comment(Comment_model $comment, $message): Comment_model
     {
+        $user = User_model::get_user();
+        $data = [
+            'parent_id' => $comment->get_id(),
+            'level' => $comment->get_level() + 1,
+            'user_id' => $user->get_id(),
+            'post_id' => $comment->get_post_id(),
+            'text' => $message,
+        ];
         return self::create($data);
+    }
+
+    public function comment(string $message): Comment_model
+    {
+        return Comment_model::comment_comment($this, $message);
     }
 
     public function delete()
@@ -303,22 +316,31 @@ class Comment_model extends CI_Emerald_Model
     }
 
     /**
+     * @return array
+     */
+    protected static function get_default_order(): array
+    {
+        return ['time_created' => 'ASC'];
+    }
+
+    /**
      * @param int $post_id
      * @return self[]
      * @throws Exception
      */
     public static function get_all_by_post_id(int $post_id)
     {
-        $data = App::get_ci()->s->from(self::CLASS_TABLE)
-            ->where(['post_id' => $post_id])
-            ->orderBy('time_created','ASC')
-            ->many();
-        $ret = [];
-        foreach ($data as $i)
-        {
-            $ret[] = (new self())->set($i);
-        }
-        return $ret;
+        return static::get_all_by(['post_id' => $post_id], static::get_default_order());
+    }
+
+    /**
+     * @param int $parent_id
+     * @return self[]
+     * @throws Exception
+     */
+    public static function get_all_by_parent_id(int $parent_id)
+    {
+        return static::get_all_by(['parent_id' => $parent_id], static::get_default_order());
     }
 
     /**
@@ -335,6 +357,8 @@ class Comment_model extends CI_Emerald_Model
                 return self::_preparation_full_info($data);
             case 'post_info':
                 return self::_preparation_post_info($data);
+            case 'subcomments_info':
+                return self::_preparation_subcomments_info($data);
             default:
                 throw new Exception('undefined preparation type');
         }
@@ -364,6 +388,8 @@ class Comment_model extends CI_Emerald_Model
         $o->user = User_model::preparation($data->get_user(),'main_page');
 
         $o->likes = $data->is_deleted() ? 0 : rand(0, 25);
+
+        $o->comments = Comment_model::preparation($data->get_comments(), 'subcomments_info');
 
         $o->time_created = $data->get_time_created();
         $o->time_updated = $data->get_time_updated();
@@ -396,6 +422,42 @@ class Comment_model extends CI_Emerald_Model
             $o->user = User_model::preparation($data->get_user(),'main_page');
 
             $o->likes = $data->is_deleted() ? 0 : rand(0, 25);
+
+            $o->time_created = $data->get_time_created();
+            $o->time_updated = $data->get_time_updated();
+
+            $ret[] = $o;
+        }
+
+        return $ret;
+    }
+
+    /**
+     * @param self[] $datas
+     * @return stdClass[]
+     * @throws Exception
+     */
+    private static function _preparation_subcomments_info($datas)
+    {
+        $ret = [];
+
+        foreach ($datas as $data){
+            $o = new stdClass();
+
+            $o->id = $data->get_id();
+            $o->text = $data->get_text_prepared();
+
+            $o->level = $data->get_level();
+            if ($data->get_parent_id()) {
+                $o->parent_id = $data->get_parent_id();
+                //$o->parent = Comment_model::preparation($data->get_parent(), 'full_info');
+            }
+
+            $o->user = User_model::preparation($data->get_user(),'main_page');
+
+            $o->likes = $data->is_deleted() ? 0 : rand(0, 25);
+
+            $o->comments = Comment_model::preparation($data->get_comments(), 'subcomments_info');
 
             $o->time_created = $data->get_time_created();
             $o->time_updated = $data->get_time_updated();

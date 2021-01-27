@@ -201,7 +201,7 @@ class Post_model extends CI_Emerald_Model {
         return (App::get_ci()->s->get_affected_rows() > 0);
     }
 
-    public function comment(string $message)
+    public function comment(string $message): Comment_model
     {
         return Comment_model::comment_post($this, $message);
     }
