@@ -334,6 +334,28 @@ class CI_Emerald_Model {
         return $ret;
     }
 
+    /**
+     * @param array $params
+     * @param array $order
+     * @return static|null
+     */
+    public static function get_by(array $params, array $order = []): ?static
+    {
+        $data = App::get_ci()->s->from(static::CLASS_TABLE);
+        if ($params) {
+            $data->where($params);
+        }
+        if ($order) {
+            $data->order($order);
+        }
+
+        $data = $data->one();
+        if (!$data) {
+            return null;
+        }
+        return (new static())->set($data);
+    }
+
     public function __debugInfo()
     {
         return (array)$this->object_beautify();
