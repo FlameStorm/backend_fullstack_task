@@ -357,7 +357,7 @@ class CI_Input {
 		if ( ! is_array($this->_input_stream))
 		{
 			// $this->raw_input_stream will trigger __get().
-			parse_str($this->raw_input_stream, $this->_input_stream);
+            $this->_input_stream = json_decode($this->raw_input_stream, TRUE);
 			is_array($this->_input_stream) OR $this->_input_stream = array();
 		}
 
