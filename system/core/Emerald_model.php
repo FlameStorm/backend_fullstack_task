@@ -15,9 +15,19 @@ class CI_Emerald_Model {
     protected $id = NULL;
     protected $data = [];
 
+    protected $_deleted = 0;
+
     protected $_can_save = TRUE;
 
     const CLASS_TABLE = NULL;
+
+    const FLAGS_SOFT_DELETE = 1; //_deleted
+    const FLAGS_DEFAULT = 0;
+    /**
+     * Combination of FLAGS_* constants
+     * @var int
+     */
+    const CLASS_FLAGS = self::FLAGS_DEFAULT;
 
 
     public function __construct()
@@ -113,6 +123,18 @@ class CI_Emerald_Model {
         }
     }
 
+    public function is_loaded(bool $hard = FALSE)
+    {
+        if ($hard)
+        {
+            if (empty($this->data) || $this->id == NULL)
+            {
+                throw new EmeraldModelLoadException('Object not loaded!');
+            }
+        }
+        return ( ! empty($this->data));
+    }
+
     /**
      * @param null $key
      * @param null $value
@@ -141,22 +163,64 @@ class CI_Emerald_Model {
         }
     }
 
+    protected static function create(array $data)
+    {
+        App::get_ci()->s->from(static::CLASS_TABLE)->insert($data)->execute();
+        return new static(App::get_ci()->s->get_insert_id());
+    }
+
+    protected function delete()
+    {
+        $this->is_loaded(TRUE);
+
+        if (self::is_soft_deletable()){
+            if (!$this->get_is_deleted()) {
+                $this->set_is_deleted(true);
+            }
+            return true;
+        }
+
+        App::get_ci()->s->from(static::CLASS_TABLE)->where(['id' => $this->get_id()])->delete()->execute();
+        return (App::get_ci()->s->get_affected_rows() > 0);
+    }
 
     /**
-     * @param bool $hard
-     * @return bool
-     * @throws Exception
+     * @return int
      */
-    public function is_loaded(bool $hard = FALSE)
+    private function get_is_deleted(): int
     {
-        if ($hard)
-        {
-            if (empty($this->data) || $this->id == NULL)
-            {
-                throw new EmeraldModelLoadException('Object not loaded!');
-            }
+        return $this->_deleted;
+    }
+
+    /**
+     * @param bool|mixed $value
+     *
+     * @return bool
+     */
+    private function set_is_deleted($value): bool
+    {
+        $this->_deleted = $value ? 1 : 0;
+        return $this->save('_deleted', $value);
+    }
+
+    /**
+     * @return bool
+     */
+    public static function is_soft_deletable(): bool
+    {
+        return (bool) (static::CLASS_FLAGS & self::FLAGS_SOFT_DELETE);
+    }
+
+    /**
+     * @return bool
+     */
+    public function is_deleted() : bool
+    {
+        if (!self::is_soft_deletable()) {
+            return false;
         }
-        return ( ! empty($this->data));
+
+        return $this->get_is_deleted();
     }
 
 

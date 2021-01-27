@@ -1,5 +1,6 @@
 <?php
 
+use Model\Comment_model;
 use Model\Login_model;
 use Model\Post_model;
 use Model\User_model;
@@ -36,16 +37,16 @@ class Main_page extends MY_Controller
         return $this->response_success(['posts' => $posts]);
     }
 
-    public function get_post($post_id){ // or can be $this->input->post('news_id') , but better for GET REQUEST USE THIS
-
+    public function get_post($post_id)
+    {
+        // or can be $this->input->get('post_id') , but better for GET REQUEST USE THIS
         $post_id = intval($post_id);
 
         if (empty($post_id)){
             return $this->response_error(CI_Core::RESPONSE_GENERIC_WRONG_PARAMS);
         }
 
-        try
-        {
+        try {
             $post = new Post_model($post_id);
         } catch (EmeraldModelNoDataException $ex){
             return $this->response_error(CI_Core::RESPONSE_GENERIC_NO_DATA);
@@ -57,30 +58,92 @@ class Main_page extends MY_Controller
     }
 
 
-    public function comment($post_id,$message){ // or can be App::get_ci()->input->post('news_id') , but better for GET REQUEST USE THIS ( tests )
+    public function comment($action)
+    {
+        if ($action === 'add') {
+            return $this->comment_add();
+        }
+
+        if ($action === 'delete') {
+            return $this->comment_delete();
+        }
+
+        if (!$comment_id = intval($action)) {
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_WRONG_PARAMS);
+        }
+
+        // read comments for guests too.
+        //if (!User_model::is_logged()){
+        //    return $this->response_error(CI_Core::RESPONSE_GENERIC_NEED_AUTH);
+        //}
+
+        try {
+            $comment = new Comment_model($comment_id);
+        } catch (EmeraldModelNoDataException $ex){
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_NO_DATA);
+        }
+
+        $result = Comment_model::preparation($comment, 'full_info');
+        return $this->response_success(['comment' => $result]);
+    }
+
+    protected function comment_add()
+    {
+        // It must be :
+        // $this->input->post('post_id')
+        // or
+        // $this->input->input_stream('post_id');
+        // but for GET REQUEST USE THIS ( just for "backend" tests )
 
         if (!User_model::is_logged()){
             return $this->response_error(CI_Core::RESPONSE_GENERIC_NEED_AUTH);
         }
 
-        $post_id = intval($post_id);
+        $post_id = intval($this->input->get('post_id'));
+        $message = trim($this->input->get('message'));
 
         if (empty($post_id) || empty($message)){
             return $this->response_error(CI_Core::RESPONSE_GENERIC_WRONG_PARAMS);
         }
 
-        try
-        {
+        try {
             $post = new Post_model($post_id);
         } catch (EmeraldModelNoDataException $ex){
             return $this->response_error(CI_Core::RESPONSE_GENERIC_NO_DATA);
         }
 
-        // Todo: 2 nd task Comment
-        $post->comment();
+        $comment = $post->comment($message);
 
-        $posts =  Post_model::preparation($post, 'full_info');
-        return $this->response_success(['post' => $posts]);
+        $result = Comment_model::preparation($comment, 'full_info');
+        return $this->response_success(['comment' => $result]);
+    }
+
+    protected function comment_delete()
+    {
+        if (!User_model::is_logged()){
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_NEED_AUTH);
+        }
+
+        $comment_id = intval($this->input->get('id'));
+
+        if (empty($comment_id)){
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_WRONG_PARAMS);
+        }
+
+        try {
+            $comment = new Comment_model($comment_id);
+        } catch (EmeraldModelNoDataException $ex){
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_NO_DATA);
+        }
+
+        $user = User_model::get_user();
+        if (!$user->is_admin() && $user->get_id() != $comment->get_user_id()) {
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_NO_ACCESS);
+        }
+
+        $result = $comment->delete();
+
+        return $this->response_success(['deleted' => $result]);
     }
 
 

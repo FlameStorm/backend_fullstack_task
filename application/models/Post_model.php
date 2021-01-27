@@ -149,7 +149,7 @@ class Post_model extends CI_Emerald_Model {
 
         if (empty($this->comments))
         {
-            $this->comments = Comment_model::get_all_by_assign_id($this->get_id());
+            $this->comments = Comment_model::get_all_by_post_id($this->get_id());
         }
         return $this->comments;
 
@@ -201,8 +201,9 @@ class Post_model extends CI_Emerald_Model {
         return (App::get_ci()->s->get_affected_rows() > 0);
     }
 
-    public function comment(){
-
+    public function comment(string $message)
+    {
+        return Comment_model::comment_post($this, $message);
     }
 
     /**
@@ -235,6 +236,8 @@ class Post_model extends CI_Emerald_Model {
                 return self::_preparation_main_page($data);
             case 'full_info':
                 return self::_preparation_full_info($data);
+            case 'comment_info':
+                return self::_preparation_comment_info($data);
             default:
                 throw new Exception('undefined preparation type');
         }
@@ -269,7 +272,6 @@ class Post_model extends CI_Emerald_Model {
         return $ret;
     }
 
-
     /**
      * @param Post_model $data
      * @return stdClass
@@ -286,10 +288,30 @@ class Post_model extends CI_Emerald_Model {
 //            var_dump($d->get_user()->object_beautify()); die();
 
         $o->user = User_model::preparation($data->get_user(), 'main_page');
-        $o->comments = Comment_model::preparation($data->get_comments(), 'full_info');
+        $o->comments = Comment_model::preparation($data->get_comments(), 'post_info');
 
         $o->likes = rand(0, 25);
 
+
+        $o->time_created = $data->get_time_created();
+        $o->time_updated = $data->get_time_updated();
+
+        $ret[] = $o;
+
+
+        return $o;
+    }
+
+    /**
+     * @param Post_model $data
+     * @return stdClass
+     */
+    private static function _preparation_comment_info(Post_model $data)
+    {
+        $o = new stdClass();
+
+        $o->id = $data->get_id();
+        $o->img = $data->get_img();
 
         $o->time_created = $data->get_time_created();
         $o->time_updated = $data->get_time_updated();
