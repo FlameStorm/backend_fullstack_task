@@ -1,5 +1,11 @@
 <?php
 
+namespace Model;
+use App;
+use CI_Emerald_Model;
+use Exception;
+use stdClass;
+
 /**
  * Created by PhpStorm.
  * User: mr.incognito
@@ -10,13 +16,20 @@ class Comment_model extends CI_Emerald_Model
 {
     const CLASS_TABLE = 'comment';
 
+    const CLASS_FLAGS = CI_Emerald_Model::FLAGS_DEFAULT | CI_Emerald_Model::FLAGS_SOFT_DELETE;
+
 
     /** @var int */
     protected $user_id;
     /** @var int */
-    protected $assing_id;
+    protected $post_id;
     /** @var string */
     protected $text;
+
+    /** @var int */
+    protected $level;
+    /** @var int|null */
+    protected $parent_id;
 
     /** @var string */
     protected $time_created;
@@ -25,8 +38,10 @@ class Comment_model extends CI_Emerald_Model
 
     // generated
     protected $comments;
+    protected $parent_comment;
     protected $likes;
     protected $user;
+    protected $post;
 
 
     /**
@@ -51,20 +66,59 @@ class Comment_model extends CI_Emerald_Model
     /**
      * @return int
      */
-    public function get_assing_id(): int
+    public function get_post_id(): int
     {
-        return $this->assing_id;
+        return $this->post_id;
     }
 
     /**
-     * @param int $assing_id
+     * @param int $post_id
      *
      * @return bool
      */
-    public function set_assing_id(int $assing_id)
+    public function set_post_id(int $post_id)
     {
-        $this->assing_id = $assing_id;
-        return $this->save('assing_id', $assing_id);
+        $this->post_id = $post_id;
+        return $this->save('post_id', $post_id);
+    }
+
+
+    /**
+     * @return int|null
+     */
+    public function get_parent_id(): ?int
+    {
+        return $this->parent_id;
+    }
+
+    /**
+     * @param int|null $parent_id
+     *
+     * @return bool
+     */
+    public function set_parent_id(int $parent_id = null)
+    {
+        $this->parent_id = $parent_id;
+        return $this->save('parent_id', $parent_id);
+    }
+
+    /**
+     * @return int
+     */
+    public function get_level(): int
+    {
+        return $this->level;
+    }
+
+    /**
+     * @param int $level
+     *
+     * @return bool
+     */
+    public function set_level(int $level)
+    {
+        $this->level = $level;
+        return $this->save('level', $level);
     }
 
 
@@ -85,6 +139,14 @@ class Comment_model extends CI_Emerald_Model
     {
         $this->text = $text;
         return $this->save('text', $text);
+    }
+
+    /**
+     * @return string
+     */
+    public function get_text_prepared(): string
+    {
+        return $this->is_deleted() ? '[deleted]' : $this->get_text();
     }
 
 
@@ -137,11 +199,43 @@ class Comment_model extends CI_Emerald_Model
     }
 
     /**
-     * @return mixed
+     * @return Comment_model[]
      */
     public function get_comments()
     {
+        if (empty($this->comments)) {
+            $this->comments = Comment_model::get_all_by_parent_id($this->get_id());
+        }
         return $this->comments;
+    }
+
+    /**
+     * @return Comment_model|null
+     */
+    public function get_parent() : ?Comment_model
+    {
+        if (!$this->get_parent_id()) {
+            return null;
+        }
+
+        if (empty($this->parent_comment)){
+             $this->parent_comment = new Comment_model($this->get_parent_id());
+        }
+        return $this->parent_comment;
+    }
+
+    /**
+     * @param Comment_model $parent_comment
+     */
+    protected function set_parent(Comment_model $parent_comment)
+    {
+        $this->set_level($parent_comment->get_level() + 1);
+        $this->set_parent_id($parent_comment->get_id());
+
+        if (empty($this->parent_comment)){
+             $this->parent_comment = new Comment_model($this->get_parent_id());
+        }
+        return $this->parent_comment;
     }
 
     /**
@@ -161,7 +255,18 @@ class Comment_model extends CI_Emerald_Model
         return $this->user;
     }
 
-    function __construct($id = NULL)
+    /**
+     * @return Post_model
+     */
+    public function get_post():Post_model
+    {
+        if (empty($this->post)) {
+            $this->post = new Post_model($this->get_post_id());
+        }
+        return $this->post;
+    }
+
+    public function __construct($id = NULL)
     {
         parent::__construct();
         $this->set_id($id);
@@ -174,34 +279,68 @@ class Comment_model extends CI_Emerald_Model
         return $this;
     }
 
-    public static function create(array $data)
+    public static function comment_post(Post_model $post, $message): Comment_model
     {
-        App::get_ci()->s->from(self::CLASS_TABLE)->insert($data)->execute();
-        return new static(App::get_ci()->s->get_insert_id());
+        $user = User_model::get_user();
+        $data = [
+            'user_id' => $user->get_id(),
+            'post_id' => $post->get_id(),
+            'text' => $message,
+        ];
+        return self::create($data);
+    }
+
+    public static function comment_comment(Comment_model $comment, $message): Comment_model
+    {
+        $user = User_model::get_user();
+        $data = [
+            'parent_id' => $comment->get_id(),
+            'level' => $comment->get_level() + 1,
+            'user_id' => $user->get_id(),
+            'post_id' => $comment->get_post_id(),
+            'text' => $message,
+        ];
+        return self::create($data);
+    }
+
+    public function comment(string $message): Comment_model
+    {
+        return Comment_model::comment_comment($this, $message);
     }
 
     public function delete()
     {
-        $this->is_loaded(TRUE);
-        App::get_ci()->s->from(self::CLASS_TABLE)->where(['id' => $this->get_id()])->delete()->execute();
-        return (App::get_ci()->s->get_affected_rows() > 0);
+        // TODO: cascade delete features?
+
+        return parent::delete();
     }
 
     /**
-     * @param int $assting_id
+     * @return array
+     */
+    protected static function get_default_order(): array
+    {
+        return ['time_created' => 'ASC'];
+    }
+
+    /**
+     * @param int $post_id
      * @return self[]
      * @throws Exception
      */
-    public static function get_all_by_assign_id(int $assting_id)
+    public static function get_all_by_post_id(int $post_id)
     {
+        return static::get_all_by(['post_id' => $post_id], static::get_default_order());
+    }
 
-        $data = App::get_ci()->s->from(self::CLASS_TABLE)->where(['assign_id' => $assting_id])->orderBy('time_created','ASC')->many();
-        $ret = [];
-        foreach ($data as $i)
-        {
-            $ret[] = (new self())->set($i);
-        }
-        return $ret;
+    /**
+     * @param int $parent_id
+     * @return self[]
+     * @throws Exception
+     */
+    public static function get_all_by_parent_id(int $parent_id)
+    {
+        return static::get_all_by(['parent_id' => $parent_id], static::get_default_order());
     }
 
     /**
@@ -216,6 +355,10 @@ class Comment_model extends CI_Emerald_Model
         {
             case 'full_info':
                 return self::_preparation_full_info($data);
+            case 'post_info':
+                return self::_preparation_post_info($data);
+            case 'subcomments_info':
+                return self::_preparation_subcomments_info($data);
             default:
                 throw new Exception('undefined preparation type');
         }
@@ -223,29 +366,104 @@ class Comment_model extends CI_Emerald_Model
 
 
     /**
-     * @param self[] $data
-     * @return stdClass[]
+     * @param self $data
+     * @return stdClass
+     * @throws Exception
      */
     private static function _preparation_full_info($data)
     {
+        $o = new stdClass();
+
+        $o->id = $data->get_id();
+        $o->text = $data->get_text_prepared();
+
+        $o->level = $data->get_level();
+        if ($data->get_parent_id()) {
+            $o->parent_id = $data->get_parent_id();
+            //$o->parent = Comment_model::preparation($d->get_parent(), 'full_info');
+        }
+
+        $o->post = Post_model::preparation($data->get_post(),'comment_info');
+
+        $o->user = User_model::preparation($data->get_user(),'main_page');
+
+        $o->likes = $data->is_deleted() ? 0 : rand(0, 25);
+
+        $o->comments = Comment_model::preparation($data->get_comments(), 'subcomments_info');
+
+        $o->time_created = $data->get_time_created();
+        $o->time_updated = $data->get_time_updated();
+
+
+        return $o;
+    }
+
+    /**
+     * @param self[] $datas
+     * @return stdClass[]
+     * @throws Exception
+     */
+    private static function _preparation_post_info($datas)
+    {
         $ret = [];
 
-        foreach ($data as $d){
+        foreach ($datas as $data){
             $o = new stdClass();
 
-            $o->id = $d->get_id();
-            $o->text = $d->get_text();
+            $o->id = $data->get_id();
+            $o->text = $data->get_text_prepared();
 
-            $o->user = User_model::preparation($d->get_user(),'main_page');
+            $o->level = $data->get_level();
+            if ($data->get_parent_id()) {
+                $o->parent_id = $data->get_parent_id();
+                //$o->parent = Comment_model::preparation($data->get_parent(), 'full_info');
+            }
 
-            $o->likes = rand(0, 25);
+            $o->user = User_model::preparation($data->get_user(),'main_page');
 
-            $o->time_created = $d->get_time_created();
-            $o->time_updated = $d->get_time_updated();
+            $o->likes = $data->is_deleted() ? 0 : rand(0, 25);
+
+            $o->time_created = $data->get_time_created();
+            $o->time_updated = $data->get_time_updated();
 
             $ret[] = $o;
         }
 
+        return $ret;
+    }
+
+    /**
+     * @param self[] $datas
+     * @return stdClass[]
+     * @throws Exception
+     */
+    private static function _preparation_subcomments_info($datas)
+    {
+        $ret = [];
+
+        foreach ($datas as $data){
+            $o = new stdClass();
+
+            $o->id = $data->get_id();
+            $o->text = $data->get_text_prepared();
+
+            $o->level = $data->get_level();
+            if ($data->get_parent_id()) {
+                $o->parent_id = $data->get_parent_id();
+                //$o->parent = Comment_model::preparation($data->get_parent(), 'full_info');
+            }
+
+            $o->user = User_model::preparation($data->get_user(),'main_page');
+
+            $o->likes = $data->is_deleted() ? 0 : rand(0, 25);
+
+            $o->comments = Comment_model::preparation($data->get_comments(), 'subcomments_info');
+
+            $o->time_created = $data->get_time_created();
+            $o->time_updated = $data->get_time_updated();
+
+            $ret[] = $o;
+        }
 
         return $ret;
     }

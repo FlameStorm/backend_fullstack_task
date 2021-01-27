@@ -308,6 +308,14 @@ class User_model extends CI_Emerald_Model {
         return $steam_id > 0;
     }
 
+    /**
+     * @return bool
+     */
+    public function is_admin(): bool
+    {
+        return $this->get_rights() == -1;
+    }
+
 
 
     /**
