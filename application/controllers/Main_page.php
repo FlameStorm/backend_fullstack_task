@@ -1,8 +1,10 @@
 <?php
 
 use Model\Boosterpack_model;
+use Model\Comment_like_model;
 use Model\Comment_model;
 use Model\Login_model;
+use Model\Post_like_model;
 use Model\Post_model;
 use Model\User_model;
 
@@ -54,7 +56,7 @@ class Main_page extends MY_Controller
         }
 
 
-        $posts =  Post_model::preparation($post, 'full_info');
+        $posts = Post_model::preparation($post, 'full_info');
         return $this->response_success(['post' => $posts]);
     }
 
@@ -199,7 +201,6 @@ class Main_page extends MY_Controller
         return $this->response_success(['user' => $user->get_id()]);
     }
 
-
     public function logout()
     {
         Login_model::logout();
@@ -252,10 +253,74 @@ class Main_page extends MY_Controller
         return $this->response_success(['amount' => $amount]);
     }
 
+    public function like($post_id)
+    {
+        if (!User_model::is_logged()) {
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_NEED_AUTH);
+        }
 
-    public function like(){
-        // todo: 3rd task add like post\comment logic
-        return $this->response_success(['likes' => rand(1,55)]); // Колво лайков под постом \ комментарием чтобы обновить . Сейчас рандомная заглушка
+        //$post_id = intval($this->input->input_stream('post_id'));
+        //TODO: redo as upper row
+        $post_id = intval($post_id);
+        if (!$post_id) {
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_WRONG_PARAMS);
+        }
+
+        try {
+            $post = new Post_model($post_id);
+        } catch (EmeraldModelNoDataException $e) {
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_NO_DATA);
+        }
+
+        try {
+            $user_like = Post_like_model::like($post);
+        } catch (Exception $e) {
+            return $this->response_error($e->getMessage());
+        }
+
+        $likes = $post->get_likes_count();
+
+        $user_like_prep = Post_like_model::preparation($user_like, 'full_info');
+
+        return $this->response_success([
+            'likes' => $likes,
+            'user_like' => $user_like_prep,
+        ]);
+    }
+
+    public function like_comment($comment_id)
+    {
+        if (!User_model::is_logged()) {
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_NEED_AUTH);
+        }
+
+        //$comment_id = intval($this->input->input_stream('comment_id'));
+        //TODO: redo as upper row
+        $comment_id = intval($comment_id);
+        if (!$comment_id) {
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_WRONG_PARAMS);
+        }
+
+        try {
+            $comment = new Comment_model($comment_id);
+        } catch (EmeraldModelNoDataException $e) {
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_NO_DATA);
+        }
+
+        try {
+            $user_like = Comment_like_model::like($comment);
+        } catch (Exception $e) {
+            return $this->response_error($e->getMessage());
+        }
+
+        $likes = $comment->get_likes_count();
+
+        $user_like_prep = Comment_like_model::preparation($user_like, 'full_info');
+
+        return $this->response_success([
+            'likes' => $likes,
+            'user_like' => $user_like_prep,
+        ]);
     }
 
 }

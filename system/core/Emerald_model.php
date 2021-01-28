@@ -336,10 +336,11 @@ class CI_Emerald_Model {
 
     /**
      * @param array $params
-     * @param array $order
+     * @param array|null $order
+     * @param bool $for_update
      * @return static|null
      */
-    public static function get_by(array $params, array $order = [])
+    public static function get_by(array $params, ?array $order = null, bool $for_update = FALSE)
     {
         $data = App::get_ci()->s->from(static::CLASS_TABLE);
         if ($params) {
@@ -347,6 +348,10 @@ class CI_Emerald_Model {
         }
         if ($order) {
             $data->order($order);
+        }
+
+        if ($for_update) {
+            $data->for_update();
         }
 
         $data = $data->one();
