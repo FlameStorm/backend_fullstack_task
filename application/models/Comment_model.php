@@ -36,6 +36,10 @@ class Comment_model extends CI_Emerald_Model
     /** @var string */
     protected $time_updated;
 
+    // denormalized
+    /** @var int */
+    protected $likes_count;
+
     // generated
     protected $comments;
     protected $parent_comment;
@@ -188,6 +192,27 @@ class Comment_model extends CI_Emerald_Model
         return $this->save('time_updated', $time_updated);
     }
 
+    // denormalized
+
+    /**
+     * @return int
+     */
+    public function get_likes_count(): int
+    {
+        return $this->likes_count;
+    }
+
+    /**
+     * @param int $likes_count
+     *
+     * @return bool
+     */
+    public function set_likes_count(int $likes_count)
+    {
+        $this->likes_count = $likes_count;
+        return $this->save('likes_count', $likes_count);
+    }
+
     // generated
 
     /**
@@ -195,6 +220,11 @@ class Comment_model extends CI_Emerald_Model
      */
     public function get_likes()
     {
+        if (!isset($this->likes)) {
+            $this->likes = Comment_like_model::get_all_by([
+                'comment_id' => $this->get_id()
+            ]);
+        }
         return $this->likes;
     }
 
@@ -203,7 +233,7 @@ class Comment_model extends CI_Emerald_Model
      */
     public function get_comments()
     {
-        if (empty($this->comments)) {
+        if (!isset($this->comments)) {
             $this->comments = Comment_model::get_all_by_parent_id($this->get_id());
         }
         return $this->comments;
@@ -355,6 +385,8 @@ class Comment_model extends CI_Emerald_Model
         {
             case 'full_info':
                 return self::_preparation_full_info($data);
+            case 'short_info':
+                return self::_preparation_short_info($data);
             case 'post_info':
                 return self::_preparation_post_info($data);
             case 'subcomments_info':
@@ -387,7 +419,7 @@ class Comment_model extends CI_Emerald_Model
 
         $o->user = User_model::preparation($data->get_user(),'main_page');
 
-        $o->likes = $data->is_deleted() ? 0 : rand(0, 25);
+        $o->likes = $data->is_deleted() ? 0 : $data->get_likes_count();
 
         $o->comments = Comment_model::preparation($data->get_comments(), 'subcomments_info');
 
@@ -421,7 +453,7 @@ class Comment_model extends CI_Emerald_Model
 
             $o->user = User_model::preparation($data->get_user(),'main_page');
 
-            $o->likes = $data->is_deleted() ? 0 : rand(0, 25);
+            $o->likes = $data->is_deleted() ? 0 : $data->get_likes_count();
 
             $o->time_created = $data->get_time_created();
             $o->time_updated = $data->get_time_updated();
@@ -455,7 +487,7 @@ class Comment_model extends CI_Emerald_Model
 
             $o->user = User_model::preparation($data->get_user(),'main_page');
 
-            $o->likes = $data->is_deleted() ? 0 : rand(0, 25);
+            $o->likes = $data->is_deleted() ? 0 : $data->get_likes_count();
 
             $o->comments = Comment_model::preparation($data->get_comments(), 'subcomments_info');
 
@@ -466,6 +498,31 @@ class Comment_model extends CI_Emerald_Model
         }
 
         return $ret;
+    }
+
+    /**
+     * @param self $datas
+     * @return stdClass
+     * @throws Exception
+     */
+    private static function _preparation_short_info($data)
+    {
+        $o = new stdClass();
+
+        $o->id = $data->get_id();
+        $o->text = $data->get_text_prepared();
+
+        $o->level = $data->get_level();
+        if ($data->get_parent_id()) {
+            $o->parent_id = $data->get_parent_id();
+        }
+
+        $o->likes = $data->is_deleted() ? 0 : $data->get_likes_count();
+
+        $o->time_created = $data->get_time_created();
+        $o->time_updated = $data->get_time_updated();
+
+        return $o;
     }
 
 

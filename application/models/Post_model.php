@@ -28,6 +28,10 @@ class Post_model extends CI_Emerald_Model {
     /** @var string */
     protected $time_updated;
 
+    // denormalized
+    /** @var int */
+    protected $likes_count;
+
     // generated
     protected $comments;
     protected $likes;
@@ -128,6 +132,27 @@ class Post_model extends CI_Emerald_Model {
     {
         $this->time_updated = $time_updated;
         return $this->save('time_updated', $time_updated);
+    }
+
+    // denormalized
+
+    /**
+     * @return int
+     */
+    public function get_likes_count(): int
+    {
+        return $this->likes_count;
+    }
+
+    /**
+     * @param int $likes_count
+     *
+     * @return bool
+     */
+    public function set_likes_count(int $likes_count)
+    {
+        $this->likes_count = $likes_count;
+        return $this->save('likes_count', $likes_count);
     }
 
     // generated
@@ -236,6 +261,7 @@ class Post_model extends CI_Emerald_Model {
                 return self::_preparation_main_page($data);
             case 'full_info':
                 return self::_preparation_full_info($data);
+            case 'short_info':
             case 'comment_info':
                 return self::_preparation_comment_info($data);
             default:
@@ -262,6 +288,8 @@ class Post_model extends CI_Emerald_Model {
 
             $o->user = User_model::preparation($d->get_user(), 'main_page');
 
+            $o->likes = $d->get_likes_count();
+
             $o->time_created = $d->get_time_created();
             $o->time_updated = $d->get_time_updated();
 
@@ -280,24 +308,20 @@ class Post_model extends CI_Emerald_Model {
     {
         $o = new stdClass();
 
-
         $o->id = $data->get_id();
         $o->img = $data->get_img();
 
+        $o->text = $data->get_text();
 
 //            var_dump($d->get_user()->object_beautify()); die();
 
         $o->user = User_model::preparation($data->get_user(), 'main_page');
         $o->comments = Comment_model::preparation($data->get_comments(), 'post_info');
 
-        $o->likes = rand(0, 25);
-
+        $o->likes = $data->get_likes_count();
 
         $o->time_created = $data->get_time_created();
         $o->time_updated = $data->get_time_updated();
-
-        $ret[] = $o;
-
 
         return $o;
     }
@@ -313,14 +337,14 @@ class Post_model extends CI_Emerald_Model {
         $o->id = $data->get_id();
         $o->img = $data->get_img();
 
+        $o->text = $data->get_text();
+
+        $o->likes = $data->get_likes_count();
+
         $o->time_created = $data->get_time_created();
         $o->time_updated = $data->get_time_updated();
 
-        $ret[] = $o;
-
-
         return $o;
     }
-
 
 }
