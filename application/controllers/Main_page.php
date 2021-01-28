@@ -1,5 +1,6 @@
 <?php
 
+use Model\Boosterpack_model;
 use Model\Comment_model;
 use Model\Login_model;
 use Model\Post_model;
@@ -225,9 +226,30 @@ class Main_page extends MY_Controller
         return $this->response_success(['amount' => $user->get_wallet_balance()]);
     }
 
-    public function buy_boosterpack(){
-        // todo: 5th task add money to user logic
-        return $this->response_success(['amount' => rand(1,55)]); // Колво лайков под постом \ комментарием чтобы обновить . Сейчас рандомная заглушка
+    public function buy_boosterpack()
+    {
+        if (!User_model::is_logged()) {
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_NEED_AUTH);
+        }
+
+        $id = intval($this->input->input_stream('id'));
+        if (!$id) {
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_WRONG_PARAMS);
+        }
+
+        try {
+            $boosterpack = new Boosterpack_model($id);
+        } catch (EmeraldModelNoDataException $ex) {
+            return $this->response_error(CI_Core::RESPONSE_GENERIC_NO_DATA);
+        }
+
+        try {
+            $amount = $boosterpack->buy();
+        } catch (Exception $e) {
+            return $this->response_error($e->getMessage());
+        }
+
+        return $this->response_success(['amount' => $amount]);
     }
 
 
