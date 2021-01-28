@@ -10,7 +10,8 @@ use CI_Emerald_Model;
  * Date: 27.01.2020
  * Time: 10:10
  */
-class Boosterpack_model extends CI_Emerald_Model {
+class Boosterpack_model extends CI_Emerald_Model
+{
     const CLASS_TABLE = 'boosterpack';
 
 
@@ -114,17 +115,39 @@ class Boosterpack_model extends CI_Emerald_Model {
         return $this;
     }
 
-    public static function create(array $data)
+    public function buy()
     {
-        App::get_ci()->s->from(self::CLASS_TABLE)->insert($data)->execute();
-        return new static(App::get_ci()->s->get_insert_id());
+        App::get_ci()->s->start_trans();
+
+        $user = User_model::get_user();
+        $user->reload(TRUE);
+
+        $wallet_balance = $user->get_wallet_balance() - $this->get_price();
+        if ($wallet_balance < 0) {
+            App::get_ci()->s->rollback();
+            throw new \Exception('Not enough money');
+        }
+
+        $amount = $this->produce_likes_after_buy();
+
+        $likes_balance = $user->get_likes_balance() + $amount;
+        $total_withdrawn = $user->get_wallet_total_withdrawn() + $this->get_price();
+
+        $user->set_wallet_balance($wallet_balance);
+        $user->set_likes_balance($likes_balance);
+        $user->set_wallet_total_withdrawn($total_withdrawn);
+
+        App::get_ci()->s->commit();
+
+        return $amount;
     }
 
-    public function delete()
+    protected function produce_likes_after_buy(): int
     {
-        $this->is_loaded(TRUE);
-        App::get_ci()->s->from(self::CLASS_TABLE)->where(['id' => $this->get_id()])->delete()->execute();
-        return (App::get_ci()->s->get_affected_rows() > 0);
+        $max_likes = intval( $this->get_bank() + $this->get_price());
+        $amount = mt_rand(1, $max_likes);
+        $this->set_bank($this->get_bank() + $this->get_price() - $amount);
+        return $amount;
     }
 
 }
