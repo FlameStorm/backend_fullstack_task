@@ -142,7 +142,8 @@ class Boosterpack_model extends CI_Emerald_Model
         Transaction_log_model::add_log($user,
             Transaction_type::BUY_BOOSTER_PACK(),
             -$price,
-            $likes_amount
+            $likes_amount,
+            $this->get_id()
         );
 
         App::get_ci()->s->commit();
