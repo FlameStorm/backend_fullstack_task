@@ -122,24 +122,32 @@ class Boosterpack_model extends CI_Emerald_Model
         $user = User_model::get_user();
         $user->reload(TRUE);
 
-        $wallet_balance = $user->get_wallet_balance() - $this->get_price();
+        $price = $this->get_price();
+
+        $wallet_balance = $user->get_wallet_balance() - $price;
         if ($wallet_balance < 0) {
             App::get_ci()->s->rollback();
             throw new \Exception('Not enough money');
         }
 
-        $amount = $this->produce_likes_after_buy();
+        $likes_amount = $this->produce_likes_after_buy();
 
-        $likes_balance = $user->get_likes_balance() + $amount;
-        $total_withdrawn = $user->get_wallet_total_withdrawn() + $this->get_price();
+        $likes_balance = $user->get_likes_balance() + $likes_amount;
+        $total_withdrawn = $user->get_wallet_total_withdrawn() + $price;
 
         $user->set_wallet_balance($wallet_balance);
         $user->set_likes_balance($likes_balance);
         $user->set_wallet_total_withdrawn($total_withdrawn);
 
+        Transaction_log_model::add_log($user,
+            Transaction_type::BUY_BOOSTER_PACK(),
+            -$price,
+            $likes_amount
+        );
+
         App::get_ci()->s->commit();
 
-        return $amount;
+        return $likes_amount;
     }
 
     protected function produce_likes_after_buy(): int

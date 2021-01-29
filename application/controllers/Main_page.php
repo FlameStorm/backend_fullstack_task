@@ -6,6 +6,8 @@ use Model\Comment_model;
 use Model\Login_model;
 use Model\Post_like_model;
 use Model\Post_model;
+use Model\Transaction_log_model;
+use Model\Transaction_type;
 use Model\User_model;
 
 /**
@@ -220,8 +222,15 @@ class Main_page extends MY_Controller
         $user = User_model::get_user();
 
         App::get_ci()->s->start_trans();
+
         $user->set_wallet_balance($user->get_wallet_balance() + $amount);
         $user->set_wallet_total_refilled($user->get_wallet_total_refilled() + $amount);
+
+        Transaction_log_model::add_log($user,
+            Transaction_type::REFILL_ACCOUNT(),
+            $amount
+        );
+
         App::get_ci()->s->commit();
 
         return $this->response_success(['amount' => $user->get_wallet_balance()]);
