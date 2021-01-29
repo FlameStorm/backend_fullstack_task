@@ -40,6 +40,8 @@ class Transaction_log_model extends CI_Emerald_Model
     protected $amount;
     /** @var int */
     protected $likes_amount;
+    /** @var int */
+    protected $entity_id;
     /** @var string */
     protected $time_created;
     /** @var string|stdClass */
@@ -151,6 +153,24 @@ class Transaction_log_model extends CI_Emerald_Model
     }
 
     /**
+     * @return int
+     */
+    public function get_entity_id(): int
+    {
+        return $this->entity_id;
+    }
+
+    /**
+     * @param int $entity_id
+     * @return bool
+     */
+    public function set_entity_id(int $entity_id)
+    {
+        $this->entity_id = $entity_id;
+        return $this->save('entity_id', $entity_id);
+    }
+
+    /**
      * @return stdClass
      */
     public function get_data()
@@ -236,6 +256,7 @@ class Transaction_log_model extends CI_Emerald_Model
         Transaction_type $type,
         float $amount,
         int $likes_amount = 0,
+        int $entity_id = 0,
         $data = null,
         ?User_model $initiator_user = null
     )
@@ -250,7 +271,8 @@ class Transaction_log_model extends CI_Emerald_Model
             'type' => $type->get_value(),
             'amount' => $amount,
             'likes_amount' => $likes_amount,
-            'data' => json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT),
+            'entity_id' => $entity_id ?: null,
+            'data' => isset($data) ? json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) : null,
         ]);
     }
 
@@ -297,6 +319,10 @@ class Transaction_log_model extends CI_Emerald_Model
 
             $o->type = $data->get_type();
             $o->amount = $data->get_amount();
+
+            $o->likes_amount = $data->get_likes_amount();
+
+            $o->entity_id = $data->get_entity_id();
 
             $o->user_id = $data->get_user_id();
             $o->initiator_user_id = $data->get_initiator_user_id();
